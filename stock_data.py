@@ -6,13 +6,15 @@ https://docs.python.org/3/library/urllib.request.html
 https://medium.com/@danielhalwell/a-comprehensive-guide-to-web-scraping-with-python-using-the-requests-library-3eaf2bb8dfd7
 https://docs.python.org/3/library/gzip.html
 https://docs.python.org/3/library/datetime.html
+https://docs.python.org/3/library/statistics.html
 '''
 from urllib.request import Request, urlopen
 from json import loads, dump
 from gzip import decompress
 from datetime import date
+from statistics import mean, median
 
-def download_data(ticker: str) -> dict:
+def download_data(ticker: str) -> list:
     '''
     This function scrapes nasdaq stock data using a header to appear as a web browser,
     then decompresses the gzip data and converts the json data to a python dictionary
@@ -49,22 +51,50 @@ def download_data(ticker: str) -> dict:
         data = urlopen(req, timeout = 5).read()
     except:
         print("The server could not be reached or the ticker doesn't exist")
-        return {}
+        return []
 
     # Decompresses the gzip compressed data
     try:
         data = decompress(data)
     except:
         print("The data was not compressed with gzip or could not be decompressed")
-        return {}
+        return []
     
-    # Converts the json data to a python dictionary
+    # Converts the json data to a python dictionary and gets the data list
     try:
         data = loads(data)["data"]["chart"]
     except:
         print("The data format is not in json or there is no data")
+        return []
 
     return data
 
+def process_data(data: list) -> dict:
+    '''Parses the stock data dictionary to find the min, max, mean, and median value'''
+    
+    # Exits if there is no data
+    if data == []:
+        print("There is no data to process")
+        return {}
 
-download_data("msft")
+    # Removes unnecessary data and sorts the closing prices
+    closing_prices = []
+    try:
+        for day in data:
+            closing_prices.append(day["y"])
+        closing_prices.sort()
+    except:
+        print("The data could not be parsed")
+        return {}
+    
+    # Produces statistic results dictionary
+    stats = {
+        "min": closing_prices[0],
+        "max": closing_prices[-1],
+        "avg": mean(closing_prices),
+        "median": median(closing_prices)
+    }
+    
+    return stats
+
+print(process_data(download_data("msft")))
